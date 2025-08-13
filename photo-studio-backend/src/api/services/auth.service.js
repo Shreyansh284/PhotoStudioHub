@@ -4,18 +4,22 @@ const User = require("../models/User");
 const AppError = require("../utils/AppError");
 
 const signToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIPIRES_IN,
-  });
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new AppError("JWT_SECRET is not set on the server", 500);
+  }
+  const expires = process.env.JWT_EXPIRES_IN || undefined; // e.g., '15m'
+  return jwt.sign({ id }, secret, expires ? { expiresIn: expires } : undefined);
 };
 
 exports.login = async (email, password) => {
+  console.log("Logging in user with email:", email);
   if (!email || !password) {
     throw new AppError("Please provide email and password!", 400);
   }
 
   const user = await User.findOne({ email }).select("+password");
-
+  console.log("User found:", user);
   if (!user || !(await user.correctPassword(password, user.password))) {
     throw new AppError("Incorrect email or password", 401);
   }

@@ -2,13 +2,15 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
+
+// IMPORTANT: load environment variables before requiring any other modules
+dotenv.config();
+
 const connectDB = require("./src/api/config/db");
 const globalErrorHandler = require("./src/api/middlewares/errorHandler.middleware");
 const AppError = require("./src/api/utils/AppError");
 const seedAdmin = require("./src/api/utils/seedAdmin");
 const mainRouter = require("./src/api/routes");
-
-dotenv.config();
 
 const app = express();
 
@@ -21,6 +23,11 @@ connectDB().then(() => {
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Health check (simple liveness)
+app.get("/api/v1/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
 
 // Routes
 app.use("/api/v1", mainRouter);

@@ -2,13 +2,28 @@
 const cloudinary = require("cloudinary").v2;
 const streamifier = require("streamifier");
 
-cloudinary.config({
-  cloud_name: process.env.CLOUD_NAME,
-  api_key: process.env.API_KEY,
-  api_secret: process.env.API_SECRET,
-});
+let configured = false;
+const ensureConfigured = () => {
+  const { CLOUD_NAME, API_KEY, API_SECRET } = process.env;
+  if (!CLOUD_NAME || !API_KEY || !API_SECRET) {
+    const msg =
+      "Cloudinary credentials (CLOUD_NAME, API_KEY, API_SECRET) are not set";
+    const err = new Error(msg);
+    err.name = "CloudinaryConfigError";
+    throw err;
+  }
+  if (!configured) {
+    cloudinary.config({
+      cloud_name: CLOUD_NAME,
+      api_key: API_KEY,
+      api_secret: API_SECRET,
+    });
+    configured = true;
+  }
+};
 
 const uploadFromBuffer = (buffer) => {
+  ensureConfigured();
   return new Promise((resolve, reject) => {
     const cld_upload_stream = cloudinary.uploader.upload_stream(
       {
@@ -22,11 +37,14 @@ const uploadFromBuffer = (buffer) => {
         }
       }
     );
-    streamifier.createReadStream(buffer).pipe(cld_upload_stream);
+    const readStream = streamifier.createReadStream(buffer);
+    readStream.on("error", reject);
+    readStream.pipe(cld_upload_stream);
   });
 };
 
 const deleteFromCloudinary = (public_id) => {
+  ensureConfigured();
   return new Promise((resolve, reject) => {
     cloudinary.uploader.destroy(public_id, (error, result) => {
       if (result) {

@@ -52,9 +52,12 @@ module.exports = (err, req, res, next) => {
   err.statusCode = err.statusCode || 500;
   err.status = err.status || "error";
 
-  if (process.env.NODE_ENV === "development") {
-    sendErrorDev(err, res);
-  } else if (process.env.NODE_ENV === "production") {
+  const env = process.env.NODE_ENV || "development";
+  if (env === "development") {
+    return sendErrorDev(err, res);
+  }
+
+  if (env === "production") {
     let error = { ...err };
     error.message = err.message;
 
@@ -65,6 +68,9 @@ module.exports = (err, req, res, next) => {
     if (error.name === "JsonWebTokenError") error = handleJWTError();
     if (error.name === "TokenExpiredError") error = handleJWTExpiredError();
 
-    sendErrorProd(error, res);
+    return sendErrorProd(error, res);
   }
+
+  // Fallback: always send something to avoid hanging connections
+  return sendErrorDev(err, res);
 };

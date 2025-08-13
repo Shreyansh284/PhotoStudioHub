@@ -8,6 +8,10 @@ const collectionRoutes = require("./collection.routes");
 
 const router = express.Router();
 
+router.get("/", (req, res) => {
+  res.json({ status: "ok", message: "API root" });
+});
+
 router.use("/auth", authRoutes);
 router.use("/clients", clientRoutes);
 router.use("/spaces", spaceRoutes);

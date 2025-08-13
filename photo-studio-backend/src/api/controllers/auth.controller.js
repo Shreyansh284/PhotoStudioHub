@@ -11,3 +11,18 @@ exports.login = catchAsync(async (req, res, next) => {
     token,
   });
 });
+
+exports.me = catchAsync(async (req, res, next) => {
+  // req.user is set by protect middleware
+  const user = req.user;
+  res.status(200).json({
+    status: "success",
+    data: {
+      user: {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+      },
+    },
+  });
+});
