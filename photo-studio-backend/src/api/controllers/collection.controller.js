@@ -41,6 +41,19 @@ exports.deletePhoto = catchAsync(async (req, res, next) => {
   });
 });
 
+exports.deleteAllPhotos = catchAsync(async (req, res, next) => {
+  const { collectionId } = req.params;
+  const collection = await collectionService.deleteAllPhotosFromCollection(
+    collectionId
+  );
+  res.status(200).json({
+    status: "success",
+    data: {
+      collection,
+    },
+  });
+});
+
 exports.getCollection = catchAsync(async (req, res, next) => {
   const collection = await collectionService.getCollectionById(
     req.params.collectionId

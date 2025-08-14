@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Card, CardContent } from '../ui/card';
+import React, { useEffect, useState } from 'react';
 import { Button } from '../ui/button';
-import { Camera, Download, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Card, CardContent } from '../ui/card';
+import { Camera, X, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import * as api from '../../api';
 
 type Photo = { id: string; url: string; title?: string };
@@ -54,6 +54,7 @@ export const PublicGallery: React.FC = () => {
   }, [link]);
 
   const openLightbox = (photo: Photo) => {
+    if (!activeCollection) return;
     setSelectedPhoto(photo);
     const photoIndex = activeCollection.photos.findIndex(p => p.id === photo.id);
     setCurrentPhotoIndex(photoIndex);
@@ -64,22 +65,50 @@ export const PublicGallery: React.FC = () => {
   };
 
   const navigatePhoto = (direction: 'prev' | 'next') => {
-    if (!selectedPhoto) return;
-
-    const newIndex = direction === 'next'
-      ? (currentPhotoIndex + 1) % activeCollection.photos.length
-      : (currentPhotoIndex - 1 + activeCollection.photos.length) % activeCollection.photos.length;
+    if (!selectedPhoto || !activeCollection) return;
+    const newIndex =
+      direction === 'next'
+        ? (currentPhotoIndex + 1) % activeCollection.photos.length
+        : (currentPhotoIndex - 1 + activeCollection.photos.length) % activeCollection.photos.length;
 
     setCurrentPhotoIndex(newIndex);
     setSelectedPhoto(activeCollection.photos[newIndex]);
   };
 
+  // Prefetch and cache images for faster viewing (Unsplash-like snappiness)
+  useEffect(() => {
+    if (!activeCollection || !activeCollection.photos?.length) return;
+    const urls = activeCollection.photos.map(p => p.url).slice(0, 50); // limit to first 50
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        if (typeof window === 'undefined' || !('caches' in window)) return;
+        const cache = await (window as any).caches.open('photohub-images-v1');
+        for (const url of urls) {
+          if (cancelled) return;
+          const match = await cache.match(url);
+          if (!match) {
+            // Fetch with same-origin credentials as default; let the browser cache it.
+            await cache.add(url);
+          }
+        }
+      } catch {
+        // ignore caching errors
+      }
+    };
+    run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeCollection?.id]);
+
   const handleDownload = (photo: Photo) => {
-    // In a real app, this would download the high-res version
-    const link = document.createElement('a');
-    link.href = photo.url;
-    link.download = `${photo.title}.jpg`;
-    link.click();
+    const a = document.createElement('a');
+    a.href = photo.url;
+    a.download = `${photo.title || 'photo'}.jpg`;
+    a.click();
   };
 
   if (loading) {
@@ -144,23 +173,43 @@ export const PublicGallery: React.FC = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="photo-grid">
+          // Unsplash-style masonry using CSS columns
+          <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-4">
             {activeCollection.photos.map((photo) => (
               <div
                 key={photo.id}
-                className="photo-grid-item group"
+                className="mb-4 break-inside-avoid relative group cursor-zoom-in overflow-hidden rounded-xl bg-muted/20 shadow-sm ring-1 ring-black/5 hover:shadow-md transition"
                 onClick={() => openLightbox(photo)}
               >
                 <img
                   src={photo.url}
                   alt={photo.title || 'Photo'}
-                  className="w-full h-full object-cover"
+                  className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                  loading="lazy"
+                  decoding="async"
                 />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                  <Button variant="glass" size="sm" className="gap-2">
-                    <Download className="h-4 w-4" />
-                    View
-                  </Button>
+                {/* Hover overlay */}
+                <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                  <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between gap-2 px-1">
+                    <div className="truncate text-white/90 text-sm font-medium drop-shadow">
+                      {photo.title || 'Photo'}
+                    </div>
+                    <div className="pointer-events-auto">
+                      <Button
+                        variant="glass"
+                        size="sm"
+                        className="gap-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openLightbox(photo);
+                        }}
+                      >
+                        <Camera className="h-4 w-4" />
+                        View
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
@@ -171,10 +220,10 @@ export const PublicGallery: React.FC = () => {
       {/* Lightbox */}
       {selectedPhoto && (
         <div className="lightbox-overlay" onClick={closeLightbox}>
-          <div className="lightbox-content">
+          <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
             {/* Close Button */}
             <Button
-              variant="glass"
+              variant="secondary"
               size="icon"
               className="absolute top-4 right-4 z-10"
               onClick={closeLightbox}
@@ -183,29 +232,29 @@ export const PublicGallery: React.FC = () => {
             </Button>
 
             {/* Navigation Arrows */}
-            {activeCollection.photos.length > 1 && (
+            {activeCollection?.photos.length > 1 && (
               <>
                 <Button
-                  variant="glass"
+                  variant="secondary"
                   size="icon"
-                  className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 z-10"
                   onClick={(e) => {
                     e.stopPropagation();
                     navigatePhoto('prev');
                   }}
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-5 w-5" />
                 </Button>
                 <Button
-                  variant="glass"
+                  variant="secondary"
                   size="icon"
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 z-10"
                   onClick={(e) => {
                     e.stopPropagation();
                     navigatePhoto('next');
                   }}
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="h-5 w-5" />
                 </Button>
               </>
             )}
@@ -215,13 +264,12 @@ export const PublicGallery: React.FC = () => {
               src={selectedPhoto.url}
               alt={selectedPhoto.title || 'Photo'}
               className="max-w-full max-h-full object-contain"
-              onClick={(e) => e.stopPropagation()}
             />
 
             {/* Bottom Controls */}
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-3">
               <Button
-                variant="glass"
+                variant="secondary"
                 className="gap-2"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -235,11 +283,13 @@ export const PublicGallery: React.FC = () => {
 
             {/* Photo Counter */}
             <div className="absolute top-4 left-4 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
-              {currentPhotoIndex + 1} of {activeCollection.photos.length}
+              {currentPhotoIndex + 1} of {activeCollection?.photos.length || 0}
             </div>
           </div>
         </div>
       )}
+
+      {/* Note: Bulk upload is for admin only and is available in the Photo Management page */}
     </div>
   );
 };

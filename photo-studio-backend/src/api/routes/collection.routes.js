@@ -19,10 +19,8 @@ router
 
 router
   .route("/:collectionId/photos")
-  .post(
-    uploadMiddleware.array("photos", 10),
-    collectionController.uploadPhotos
-  );
+  .post(uploadMiddleware.array("photos", 10), collectionController.uploadPhotos)
+  .delete(collectionController.deleteAllPhotos);
 
 router
   .route("/:collectionId/photos/:photoId")

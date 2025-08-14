@@ -166,6 +166,11 @@ export async function deletePhoto(collectionId: string, photoPublicId: string): 
 	return (res as any)?.data?.collection ?? (res as any)?.collection ?? (res as any);
 }
 
+export async function deleteAllPhotos(collectionId: string): Promise<BackendCollection> {
+	const res = await apiDelete<ApiSuccess<{ collection: BackendCollection }>>(`/collections/${collectionId}/photos`);
+	return (res as any)?.data?.collection ?? (res as any)?.collection ?? (res as any);
+}
+
 // Public gallery
 export type PublicPhoto = { url: string; public_id: string };
 export type PublicCollection = { _id: string; name: string; photos: PublicPhoto[] };
@@ -175,4 +180,44 @@ export type PublicSpace = { _id: string; name: string; shareableLink: string; cl
 export async function getPublicSpaceByLink(link: string): Promise<PublicSpace> {
 	const res = await apiGet<ApiSuccess<{ space: PublicSpace }>>(`/spaces/share/${encodeURIComponent(link)}`);
 	return (res.data as any).space;
+}
+
+export type UploadResult = { id: string; url: string; title?: string };
+
+/**
+ * Upload a single photo to a collection with progress callback.
+ * Expects backend route: POST /api/collections/:id/photos (multipart/form-data)
+ * Form fields: file, relativePath? (optional)
+ */
+export function uploadPhotoToCollection(
+  collectionId: string,
+  file: File,
+  onProgress?: (percent: number) => void,
+  relativePath?: string
+): Promise<UploadResult> {
+  return new Promise((resolve, reject) => {
+    const form = new FormData();
+    form.append('file', file);
+    if (relativePath) form.append('relativePath', relativePath);
+
+    const xhr = new XMLHttpRequest();
+	xhr.open('POST', `${API_BASE}/collections/${encodeURIComponent(collectionId)}/photos`);
+    xhr.responseType = 'json';
+
+    xhr.upload.onprogress = evt => {
+      if (onProgress && evt.lengthComputable) {
+        onProgress(Math.round((evt.loaded / evt.total) * 100));
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(xhr.response as UploadResult);
+      } else {
+        reject(new Error(`Upload failed (${xhr.status})`));
+      }
+    };
+    xhr.onerror = () => reject(new Error('Network error during upload'));
+    xhr.send(form);
+  });
 }

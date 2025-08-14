@@ -47,7 +47,9 @@ interface AppContextType {
   addPhotoSpace: (space: Omit<PhotoSpace, 'id' | 'createdAt' | 'shareableLink'>) => Promise<void>;
   addCollection: (collection: Omit<Collection, 'id' | 'photos'>) => Promise<void>;
   uploadPhoto: (collectionId: string, file: File) => Promise<void>;
+  uploadPhotosMany: (collectionId: string, files: File[]) => Promise<void>;
   deletePhoto: (collectionId: string, photoId: string) => Promise<void>;
+  deleteAllPhotos: (collectionId: string) => Promise<void>;
 
   // Getters
   getClientById: (id: string) => Client | undefined;
@@ -171,8 +173,24 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     } : c));
   };
 
+  const uploadPhotosMany = async (collectionId: string, files: File[]): Promise<void> => {
+    const updated = await api.uploadPhotos(collectionId, files);
+    setCollections(prev => prev.map(c => c.id === collectionId ? {
+      ...c,
+      photos: (updated.photos || []).map(p => ({ id: p.public_id, url: p.url, collectionId })),
+    } : c));
+  };
+
   const deletePhoto = async (collectionId: string, photoId: string) => {
     const updated = await api.deletePhoto(collectionId, photoId);
+    setCollections(prev => prev.map(c => c.id === collectionId ? {
+      ...c,
+      photos: (updated.photos || []).map(p => ({ id: p.public_id, url: p.url, collectionId })),
+    } : c));
+  };
+
+  const deleteAllPhotos = async (collectionId: string) => {
+    const updated = await api.deleteAllPhotos(collectionId);
     setCollections(prev => prev.map(c => c.id === collectionId ? {
       ...c,
       photos: (updated.photos || []).map(p => ({ id: p.public_id, url: p.url, collectionId })),
@@ -195,7 +213,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     addPhotoSpace,
     addCollection,
     uploadPhoto,
+    uploadPhotosMany,
     deletePhoto,
+    deleteAllPhotos,
     getClientById,
     getSpaceById,
     getCollectionById,

@@ -5,7 +5,7 @@ import { Button } from '../ui/button';
 import { Users, Camera, Plus, Image } from 'lucide-react';
 
 export const DashboardHome: React.FC = () => {
-  const { clients, photoSpaces, setCurrentPage } = useApp();
+  const { clients, photoSpaces, collections, setCurrentPage } = useApp();
 
   const stats = [
     {
@@ -24,7 +24,7 @@ export const DashboardHome: React.FC = () => {
     },
     {
       title: 'Total Collections',
-      value: '8',
+      value: collections.length,
       description: 'Organized photo collections',
       icon: Image,
       color: 'text-success'

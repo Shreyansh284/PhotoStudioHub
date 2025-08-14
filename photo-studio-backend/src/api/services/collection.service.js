@@ -60,6 +60,36 @@ exports.deletePhotoFromCollection = async (collectionId, photoPublicId) => {
   return collection;
 };
 
+exports.deleteAllPhotosFromCollection = async (collectionId) => {
+  const collection = await Collection.findById(collectionId);
+  if (!collection) {
+    throw new AppError("No collection found with that ID", 404);
+  }
+
+  const photos = [...collection.photos];
+  if (!photos.length) return collection;
+
+  const results = await Promise.allSettled(
+    photos.map((p) => deleteFromCloudinary(p.public_id))
+  );
+
+  // Keep any photos that failed to delete
+  const failedIds = results
+    .map((r, i) => (r.status === "rejected" ? photos[i].public_id : null))
+    .filter(Boolean);
+
+  if (failedIds.length) {
+    collection.photos = collection.photos.filter((p) =>
+      failedIds.includes(p.public_id)
+    );
+  } else {
+    collection.photos = [];
+  }
+
+  await collection.save();
+  return collection;
+};
+
 exports.updateCollection = async (id, collectionData) => {
   return await Collection.findByIdAndUpdate(id, collectionData, {
     new: true,

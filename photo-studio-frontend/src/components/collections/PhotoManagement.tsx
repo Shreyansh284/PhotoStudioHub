@@ -1,18 +1,32 @@
-import React, { useState, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '../ui/alert-dialog';
 import { ArrowLeft, Upload, Trash2, Download, X } from 'lucide-react';
 import { toast } from '../../hooks/use-toast';
+import BulkUpload from '../admin/BulkUpload';
 
 interface PhotoManagementProps {
   collectionId: string;
 }
 
 export const PhotoManagement: React.FC<PhotoManagementProps> = ({ collectionId }) => {
-  const { getCollectionById, getSpaceById, getClientById, uploadPhoto, deletePhoto, setCurrentPage } = useApp();
+  const { getCollectionById, getSpaceById, getClientById, uploadPhoto, deletePhoto, deleteAllPhotos, setCurrentPage } = useApp();
   const [uploading, setUploading] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const collection = getCollectionById(collectionId);
@@ -77,6 +91,14 @@ export const PhotoManagement: React.FC<PhotoManagementProps> = ({ collectionId }
     setSelectedPhoto(null);
   };
 
+  // Lazy-chunk photos to reduce initial render work
+  const chunkSize = 60; // render in chunks to avoid UI jank
+  const [visibleCount, setVisibleCount] = useState(chunkSize);
+  const photos = collection.photos;
+  const visiblePhotos = useMemo(() => photos.slice(0, visibleCount), [photos, visibleCount]);
+
+  const loadMore = () => setVisibleCount(c => Math.min(c + chunkSize, photos.length));
+
   return (
     <div className="container-studio py-8">
       <div className="flex items-center gap-4 mb-8">
@@ -95,46 +117,72 @@ export const PhotoManagement: React.FC<PhotoManagementProps> = ({ collectionId }
         </div>
       </div>
 
-      {/* Upload Section */}
+      {/* Bulk Upload Section */}
       <Card className="card-elevated mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5 text-primary" />
-            Upload Photos
+            Bulk Upload Photos
           </CardTitle>
           <CardDescription>
-            Add new photos to the {collection.name} collection
+            Add multiple photos or a whole folder to the {collection.name} collection
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-            <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Drag and drop photos here</h3>
-            <p className="text-muted-foreground mb-4">or click to browse your files</p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={(e) => handleFileUpload(e.target.files)}
-              className="hidden"
-            />
-            <Button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="btn-hero gap-2"
-            >
-              <Upload className="h-4 w-4" />
-              {uploading ? 'Uploading...' : 'Select Photos'}
-            </Button>
-          </div>
+          <BulkUpload
+            collectionId={collection.id}
+            onCompleted={() => {
+              toast({ title: 'Upload complete', description: 'Photos have been uploaded.' });
+            }}
+          />
         </CardContent>
       </Card>
 
       {/* Photo Grid */}
       <Card className="card-elevated">
         <CardHeader>
-          <CardTitle>Photos ({collection.photos.length})</CardTitle>
+          <div className="flex items-center justify-between gap-4">
+            <CardTitle>Photos ({collection.photos.length})</CardTitle>
+            {collection.photos.length > 0 && (
+              <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={isDeletingAll}
+                  >
+                    Delete All
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete all photos?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete all photos in “{collection.name}”. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={isDeletingAll}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      onClick={async () => {
+                        try {
+                          setIsDeletingAll(true);
+                          await deleteAllPhotos(collection.id);
+                          toast({ title: 'All photos deleted', description: 'The collection is now empty.' });
+                          setConfirmOpen(false);
+                        } finally {
+                          setIsDeletingAll(false);
+                        }
+                      }}
+                    >
+                      {isDeletingAll ? 'Deleting…' : 'Delete All'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
           <CardDescription>
             Manage photos in this collection
           </CardDescription>
@@ -147,42 +195,51 @@ export const PhotoManagement: React.FC<PhotoManagementProps> = ({ collectionId }
               <p className="text-muted-foreground">Upload your first photos to get started</p>
             </div>
           ) : (
-            <div className="photo-grid">
-              {collection.photos.map((photo) => (
-                <div key={photo.id} className="photo-grid-item group">
-                  <img
-                    src={photo.url}
-                    alt={photo.filename}
-                    className="w-full h-full object-cover"
-                    onClick={() => openLightbox(photo.url)}
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="glass"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openLightbox(photo.url);
-                        }}
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeletePhoto(photo.id);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+            <>
+              {/* Masonry-like columns for admin view to keep it fast */}
+              <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-4">
+                {visiblePhotos.map((photo) => (
+                  <div key={photo.id} className="photo-grid-item group">
+                    <img src={photo.url} alt={photo.filename}
+                      className="w-full h-auto object-cover rounded-lg mb-4 break-inside-avoid"
+                      loading="lazy" decoding="async"
+                      onClick={() => openLightbox(photo.url)} />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="glass"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openLightbox(photo.url);
+                          }}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeletePhoto(photo.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
+                ))}
+              </div>
+              {/* Load more button for large lists */}
+              {visibleCount < photos.length && (
+                <div className="flex justify-center mt-6">
+                  <Button variant="outline" onClick={loadMore}>
+                    Load more ({photos.length - visibleCount} left)
+                  </Button>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
