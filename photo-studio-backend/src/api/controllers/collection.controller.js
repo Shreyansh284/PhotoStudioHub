@@ -27,6 +27,21 @@ exports.uploadPhotos = catchAsync(async (req, res, next) => {
   });
 });
 
+exports.addPhotosMetadata = catchAsync(async (req, res, next) => {
+  const { collectionId } = req.params;
+  const { photos } = req.body; // [{ url, public_id }]
+  const collection = await collectionService.addPhotosMetadata(
+    collectionId,
+    photos || []
+  );
+  res.status(200).json({
+    status: "success",
+    data: {
+      collection,
+    },
+  });
+});
+
 exports.deletePhoto = catchAsync(async (req, res, next) => {
   const { collectionId, photoId } = req.params;
   const collection = await collectionService.deletePhotoFromCollection(

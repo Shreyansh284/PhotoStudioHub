@@ -6,6 +6,7 @@ const {
   deleteFromCloudinary,
 } = require("../config/cloudinary");
 const AppError = require("../utils/AppError");
+const faceService = require("./face.service");
 
 exports.createCollection = async (collectionData) => {
   const collection = await Collection.create(collectionData);
@@ -27,10 +28,74 @@ exports.uploadPhotosToCollection = async (collectionId, files) => {
   const photos = results.map((result) => ({
     url: result.secure_url,
     public_id: result.public_id,
+    detectedFaces: [], // Initialize with empty faces array
   }));
 
   collection.photos.push(...photos);
   await collection.save();
+
+  // Trigger face recognition for newly uploaded photos asynchronously
+  // This runs in the background and doesn't block the response
+  setImmediate(async () => {
+    try {
+      const spaceId = collection.space;
+      for (const photo of photos) {
+        const newPhotoId =
+          collection.photos[
+            collection.photos.length - photos.length + photos.indexOf(photo)
+          ]._id;
+        await faceService.recognizeFacesInPhoto(
+          spaceId,
+          collectionId,
+          newPhotoId
+        );
+      }
+      console.log(
+        `Face recognition completed for ${photos.length} photos in collection ${collectionId}`
+      );
+    } catch (error) {
+      console.error("Background face recognition failed:", error);
+    }
+  });
+
+  return collection;
+};
+
+exports.addPhotosMetadata = async (collectionId, photosInput) => {
+  const collection = await Collection.findById(collectionId);
+  if (!collection) {
+    throw new AppError("No collection found with that ID", 404);
+  }
+  const photos = (photosInput || []).map((p) => ({
+    url: p.url,
+    public_id: p.public_id,
+    detectedFaces: [], // Initialize with empty faces array
+  }));
+  collection.photos.push(...photos);
+  await collection.save();
+
+  // Trigger face recognition for newly added photos asynchronously
+  setImmediate(async () => {
+    try {
+      const spaceId = collection.space;
+      for (const photo of photos) {
+        const newPhotoId =
+          collection.photos[
+            collection.photos.length - photos.length + photos.indexOf(photo)
+          ]._id;
+        await faceService.recognizeFacesInPhoto(
+          spaceId,
+          collectionId,
+          newPhotoId
+        );
+      }
+      console.log(
+        `Face recognition completed for ${photos.length} photos in collection ${collectionId}`
+      );
+    } catch (error) {
+      console.error("Background face recognition failed:", error);
+    }
+  });
 
   return collection;
 };

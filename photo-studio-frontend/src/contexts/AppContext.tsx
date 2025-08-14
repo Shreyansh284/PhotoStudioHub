@@ -50,6 +50,8 @@ interface AppContextType {
   uploadPhotosMany: (collectionId: string, files: File[]) => Promise<void>;
   deletePhoto: (collectionId: string, photoId: string) => Promise<void>;
   deleteAllPhotos: (collectionId: string) => Promise<void>;
+  refreshCollection: (collectionId: string) => Promise<void>;
+  appendPhotosToCollection: (collectionId: string, photos: { url: string; public_id: string }[]) => void;
 
   // Getters
   getClientById: (id: string) => Client | undefined;
@@ -197,6 +199,26 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     } : c));
   };
 
+  const refreshCollection = async (collectionId: string) => {
+    const updated = await api.getCollection(collectionId);
+    setCollections(prev => prev.map(c => c.id === collectionId ? {
+      ...c,
+      name: updated.name,
+      photos: (updated.photos || []).map(p => ({ id: p.public_id, url: p.url, collectionId })),
+    } : c));
+  };
+
+  const appendPhotosToCollection = (collectionId: string, photos: { url: string; public_id: string }[]) => {
+    if (!photos?.length) return;
+    setCollections(prev => prev.map(c => c.id === collectionId ? {
+      ...c,
+      photos: [
+        ...c.photos,
+        ...photos.map(p => ({ id: p.public_id, url: p.url, collectionId }))
+      ],
+    } : c));
+  };
+
   const getClientById = (id: string) => clients.find(client => client.id === id);
   const getSpaceById = (id: string) => photoSpaces.find(space => space.id === id);
   const getCollectionById = (id: string) => collections.find(collection => collection.id === id);
@@ -216,6 +238,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     uploadPhotosMany,
     deletePhoto,
     deleteAllPhotos,
+    refreshCollection,
+    appendPhotosToCollection,
     getClientById,
     getSpaceById,
     getCollectionById,

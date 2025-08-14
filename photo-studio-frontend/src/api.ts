@@ -115,10 +115,40 @@ export async function getMe(): Promise<BackendUser> {
 }
 
 // Clients
-export type BackendPhoto = { url: string; public_id: string };
+export type BackendPhoto = { url: string; public_id: string; detectedFaces?: Array<{ descriptor: number[]; boundingBox: { width: number; height: number; left: number; top: number; } }> };
 export type BackendCollection = { _id: string; name: string; space: string; photos?: BackendPhoto[] };
 export type BackendSpace = { _id: string; name: string; client: string; shareableLink: string; collections?: BackendCollection[] };
 export type BackendClient = { _id: string; name: string; email: string; spaces?: BackendSpace[] };
+
+// Face Recognition
+export type FaceBoundingBox = {
+	width: number;
+	height: number;
+	left: number;
+	top: number;
+};
+
+export type DetectedFace = {
+	id: string;
+	thumbnailUrl: string;
+	photoCount: number;
+	photoIds: string[]; // MongoDB IDs
+	photoPublicIds: string[]; // Cloudinary public IDs for frontend matching
+	representative: {
+		photoId: string;
+		photoUrl: string;
+		boundingBox: FaceBoundingBox;
+	};
+};
+
+export type FaceRecognitionResult = {
+	photoId: string;
+	facesDetected: number;
+	faces: Array<{
+		descriptor: number[];
+		boundingBox: FaceBoundingBox;
+	}>;
+};
 
 export async function getClients(): Promise<BackendClient[]> {
 	const res = await apiGet<ApiSuccess<{ clients: BackendClient[] }> & { results?: number }>("/clients");
@@ -171,6 +201,22 @@ export async function deleteAllPhotos(collectionId: string): Promise<BackendColl
 	return (res as any)?.data?.collection ?? (res as any)?.collection ?? (res as any);
 }
 
+// Direct-to-Cloudinary support
+export async function getUploadSignature(folder = 'photo-studio') {
+	return apiPostJson<ApiSuccess<{ timestamp: number; signature: string; folder: string; cloudName: string; apiKey: string }>>(
+		`/uploads/signature`,
+		{ folder }
+	).then((r) => (r as any).data);
+}
+
+export async function savePhotosMetadata(collectionId: string, photos: { url: string; public_id: string }[]): Promise<BackendCollection> {
+	const res = await apiPostJson<ApiSuccess<{ collection: BackendCollection }>>(
+		`/collections/${collectionId}/photos/metadata`,
+		{ photos }
+	);
+	return (res.data as any).collection;
+}
+
 // Public gallery
 export type PublicPhoto = { url: string; public_id: string };
 export type PublicCollection = { _id: string; name: string; photos: PublicPhoto[] };
@@ -220,4 +266,44 @@ export function uploadPhotoToCollection(
     xhr.onerror = () => reject(new Error('Network error during upload'));
     xhr.send(form);
   });
+}
+
+// Face Recognition APIs
+
+/**
+ * Get all unique faces detected in a space (for client gallery)
+ * Public endpoint - no authentication required
+ */
+export async function getSpaceFaces(spaceId: string): Promise<DetectedFace[]> {
+	const res = await apiGet<ApiSuccess<{ faces: DetectedFace[] }>>(`/spaces/${spaceId}/faces`);
+	return (res.data as any).faces || [];
+}
+
+/**
+ * Trigger face recognition for a specific photo (admin only)
+ */
+export async function recognizeFacesInPhoto(spaceId: string, collectionId: string, photoId: string): Promise<FaceRecognitionResult> {
+	const res = await apiPostJson<ApiSuccess<FaceRecognitionResult>>(`/spaces/${spaceId}/collections/${collectionId}/photos/${photoId}/recognize-faces`, {});
+	return (res.data as any);
+}
+
+/**
+ * Process face recognition for all photos in a collection (admin only)
+ */
+export async function processCollectionFaces(spaceId: string, collectionId: string): Promise<{
+	collectionId: string;
+	summary: {
+		totalPhotos: number;
+		successfulProcessing: number;
+		totalFacesDetected: number;
+	};
+	results: Array<{
+		photoId: string;
+		facesCount: number;
+		success: boolean;
+		error?: string;
+	}>;
+}> {
+	const res = await apiPostJson<ApiSuccess<any>>(`/spaces/${spaceId}/collections/${collectionId}/process-faces`, {});
+	return (res.data as any);
 }

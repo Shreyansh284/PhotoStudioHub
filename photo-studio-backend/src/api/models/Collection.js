@@ -15,6 +15,19 @@ const collectionSchema = new mongoose.Schema({
     {
       url: String,
       public_id: String,
+      detectedFaces: [
+        {
+          // The 128-point vector that uniquely identifies a face
+          descriptor: { type: [Number], required: true },
+          boundingBox: {
+            // Coordinates of the face in the photo
+            width: { type: Number },
+            height: { type: Number },
+            left: { type: Number },
+            top: { type: Number },
+          },
+        },
+      ],
     },
   ],
 });

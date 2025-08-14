@@ -13,9 +13,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '../ui/alert-dialog';
-import { ArrowLeft, Upload, Trash2, Download, X } from 'lucide-react';
+import { ArrowLeft, Upload, Trash2, Download, X, Users, Loader2 } from 'lucide-react';
 import { toast } from '../../hooks/use-toast';
 import BulkUpload from '../admin/BulkUpload';
+import * as api from '../../api';
 
 interface PhotoManagementProps {
   collectionId: string;
@@ -27,6 +28,7 @@ export const PhotoManagement: React.FC<PhotoManagementProps> = ({ collectionId }
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isDeletingAll, setIsDeletingAll] = useState(false);
+  const [isProcessingFaces, setIsProcessingFaces] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const collection = getCollectionById(collectionId);
@@ -135,6 +137,71 @@ export const PhotoManagement: React.FC<PhotoManagementProps> = ({ collectionId }
               toast({ title: 'Upload complete', description: 'Photos have been uploaded.' });
             }}
           />
+        </CardContent>
+      </Card>
+
+      {/* Face Recognition Section */}
+      <Card className="card-elevated mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5 text-primary" />
+            Face Recognition
+          </CardTitle>
+          <CardDescription>
+            Process face recognition for all photos in this collection to enable face-based filtering in the client gallery
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <Button
+              onClick={async () => {
+                try {
+                  setIsProcessingFaces(true);
+                  const result = await api.processCollectionFaces(space.id, collection.id);
+                  toast({
+                    title: 'Face processing complete',
+                    description: `Processed ${result.summary.totalPhotos} photos and detected ${result.summary.totalFacesDetected} faces.`,
+                  });
+                } catch (error: any) {
+                  toast({
+                    title: 'Face processing failed',
+                    description: error?.message || 'Failed to process faces',
+                    variant: 'destructive',
+                  });
+                } finally {
+                  setIsProcessingFaces(false);
+                }
+              }}
+              disabled={isProcessingFaces || collection.photos.length === 0}
+              className="gap-2"
+            >
+              {isProcessingFaces ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Processing Faces...
+                </>
+              ) : (
+                <>
+                  <Users className="h-4 w-4" />
+                  Process All Photos
+                </>
+              )}
+            </Button>
+
+            {collection.photos.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                Upload some photos first to enable face recognition
+              </p>
+            )}
+          </div>
+
+          <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+            <p className="text-sm text-muted-foreground">
+              <strong>How it works:</strong> Face recognition runs automatically when photos are uploaded,
+              but you can manually process all photos here. This enables clients to view their gallery
+              organized by faces, making it easy to find photos of specific people.
+            </p>
+          </div>
         </CardContent>
       </Card>
 

@@ -22,6 +22,11 @@ router
   .post(uploadMiddleware.array("photos", 10), collectionController.uploadPhotos)
   .delete(collectionController.deleteAllPhotos);
 
+// Direct-to-Cloudinary: append metadata
+router
+  .route("/:collectionId/photos/metadata")
+  .post(collectionController.addPhotosMetadata);
+
 router
   .route("/:collectionId/photos/:photoId")
   .delete(collectionController.deletePhoto);

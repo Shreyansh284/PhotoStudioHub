@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { UploadCloud, FolderOpen } from 'lucide-react';
 import * as api from '../../api';
 import { useApp } from '../../contexts/AppContext';
+// @ts-ignore - you may need to install this: npm i browser-image-compression
+import imageCompression from 'browser-image-compression';
 
 type Photo = { id: string; url: string; title?: string };
 
@@ -17,14 +19,15 @@ type QueueItem = {
     file: File;
     relativePath?: string;
     progress: number;
-    status: 'queued' | 'uploading' | 'done' | 'error';
+    status: 'queued' | 'compressing' | 'uploading' | 'saving' | 'done' | 'error';
     error?: string;
+    previewUrl?: string;
 };
 
 const BYTES_IN_MB = 1024 * 1024;
 
 export const BulkUpload: React.FC<Props> = ({ collectionId, onCompleted }) => {
-    const { uploadPhotosMany } = useApp();
+    const { appendPhotosToCollection } = useApp();
     const [items, setItems] = useState<QueueItem[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const inputRef = useRef<HTMLInputElement | null>(null);
@@ -70,7 +73,7 @@ export const BulkUpload: React.FC<Props> = ({ collectionId, onCompleted }) => {
         if (!items.length || isUploading) return;
         setIsUploading(true);
 
-        // Batch files to match backend uploadMiddleware.array("photos", 10)
+        // Batch files; we do client-side direct upload to Cloudinary with preview
         const batchSize = 8;
         const queued = items.filter(i => i.status === 'queued');
         const batches: QueueItem[][] = [];
@@ -79,17 +82,66 @@ export const BulkUpload: React.FC<Props> = ({ collectionId, onCompleted }) => {
         }
 
         for (const batch of batches) {
-            // mark as uploading
-            setItems(prev => prev.map(it => batch.some(b => b.id === it.id) ? { ...it, status: 'uploading' } : it));
+            // Step 1: generate quick previews (compressed)
+            setItems(prev => prev.map(it => batch.some(b => b.id === it.id) ? { ...it, status: 'compressing' } : it));
+            const previews = await Promise.all(batch.map(async (b) => {
+                try {
+                    const compressed = await imageCompression(b.file, { maxSizeMB: 0.1, maxWidthOrHeight: 800, useWebWorker: true });
+                    const url = URL.createObjectURL(compressed);
+                    return { id: b.id, previewUrl: url };
+                } catch {
+                    return { id: b.id, previewUrl: undefined };
+                }
+            }));
+            setItems(prev => prev.map(it => {
+                const p = previews.find(pp => pp.id === it.id);
+                return p ? { ...it, previewUrl: p.previewUrl } : it;
+            }));
 
+            // Step 2: direct upload originals to Cloudinary with signature (adaptive concurrency)
+            setItems(prev => prev.map(it => batch.some(b => b.id === it.id) ? { ...it, status: 'uploading', progress: 5 } : it));
+            const sig = await api.getUploadSignature('photo-studio');
+
+            const workerCount = Math.min(4, batch.length);
+            let idx = 0;
+            const uploadedMeta: { id: string; url: string; public_id: string }[] = [];
+
+            const worker = async () => {
+                while (idx < batch.length) {
+                    const current = batch[idx++];
+                    try {
+                        const form = new FormData();
+                        form.append('file', current.file);
+                        form.append('api_key', sig.apiKey);
+                        form.append('timestamp', String(sig.timestamp));
+                        form.append('signature', sig.signature);
+                        form.append('folder', sig.folder);
+
+                        const res = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`, { method: 'POST', body: form });
+                        if (!res.ok) throw new Error('Cloudinary upload failed');
+                        const data = await res.json();
+                        uploadedMeta.push({ id: current.id, url: data.secure_url as string, public_id: data.public_id as string });
+                        setItems(prev => prev.map(it => it.id === current.id ? { ...it, progress: 80 } : it));
+                    } catch (e: any) {
+                        setItems(prev => prev.map(it => it.id === current.id ? { ...it, status: 'error', error: e?.message || 'Failed to upload' } : it));
+                    }
+                }
+            };
+
+            await Promise.all([...Array(workerCount)].map(() => worker()));
+
+            // Step 3: save to backend DB
+            setItems(prev => prev.map(it => batch.some(b => b.id === it.id) ? { ...it, status: 'saving', progress: 90 } : it));
             try {
-                const files = batch.map(b => b.file);
-                // Use context action to ensure state is refreshed in UI
-                await uploadPhotosMany(collectionId, files);
-                // mark as done
-                setItems(prev => prev.map(it => batch.some(b => b.id === it.id) ? { ...it, status: 'done', progress: 100 } : it));
+                const payload = uploadedMeta.map(m => ({ url: m.url, public_id: m.public_id }));
+                if (payload.length) {
+                    await api.savePhotosMetadata(collectionId, payload);
+                    // Append immediately for snappy UI
+                    appendPhotosToCollection(collectionId, payload);
+                    setItems(prev => prev.map(it => batch.some(b => b.id === it.id && uploadedMeta.some(u => u.id === it.id)) ? { ...it, status: 'done', progress: 100 } : it));
+                }
             } catch (err: any) {
-                setItems(prev => prev.map(it => batch.some(b => b.id === it.id) ? { ...it, status: 'error', error: err?.message || 'Failed' } : it));
+                setItems(prev => prev.map(it => batch.some(b => b.id === it.id) ? { ...it, status: 'error', error: err?.message || 'Failed to save' } : it));
             }
         }
 
