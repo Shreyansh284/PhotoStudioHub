@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../contexts/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -9,7 +10,8 @@ import { Users, Plus, Eye, Mail, Calendar } from 'lucide-react';
 import { toast } from '../../hooks/use-toast';
 
 export const ClientsList: React.FC = () => {
-  const { clients, addClient, setCurrentPage } = useApp();
+  const { clients, addClient } = useApp();
+  const navigate = useNavigate();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newClientName, setNewClientName] = useState('');
   const [newClientEmail, setNewClientEmail] = useState('');
@@ -26,7 +28,7 @@ export const ClientsList: React.FC = () => {
   };
 
   const handleViewClient = (clientId: string) => {
-    setCurrentPage(`client-${clientId}`);
+    navigate(`/admin/clients/${clientId}`);
   };
 
   return (

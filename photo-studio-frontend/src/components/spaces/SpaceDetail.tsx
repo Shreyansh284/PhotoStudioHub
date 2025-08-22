@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useApp } from '../../contexts/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -9,11 +10,14 @@ import { ArrowLeft, Plus, Image, Calendar, Copy, Settings } from 'lucide-react';
 import { toast } from '../../hooks/use-toast';
 
 interface SpaceDetailProps {
-  spaceId: string;
+  spaceId?: string;
 }
 
-export const SpaceDetail: React.FC<SpaceDetailProps> = ({ spaceId }) => {
-  const { getSpaceById, getClientById, getCollectionsBySpaceId, addCollection, setCurrentPage } = useApp();
+export const SpaceDetail: React.FC<SpaceDetailProps> = ({ spaceId: propSpaceId }) => {
+  const { spaceId: paramSpaceId } = useParams<{ spaceId: string }>();
+  const spaceId = propSpaceId || paramSpaceId!;
+  const { getSpaceById, getClientById, getCollectionsBySpaceId, addCollection } = useApp();
+  const navigate = useNavigate();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
 
@@ -28,7 +32,7 @@ export const SpaceDetail: React.FC<SpaceDetailProps> = ({ spaceId }) => {
           <CardContent>
             <h3 className="text-lg font-semibold mb-2">Space not found</h3>
             <p className="text-muted-foreground mb-4">The requested photo space could not be found</p>
-            <Button onClick={() => setCurrentPage('clients')} variant="outline">
+            <Button onClick={() => navigate('/admin/clients')} variant="outline">
               Back to Clients
             </Button>
           </CardContent>
@@ -57,7 +61,7 @@ export const SpaceDetail: React.FC<SpaceDetailProps> = ({ spaceId }) => {
   };
 
   const handleManageCollection = (collectionId: string) => {
-    setCurrentPage(`collection-${collectionId}`);
+    navigate(`/admin/collections/${collectionId}`);
   };
 
   return (
@@ -66,7 +70,7 @@ export const SpaceDetail: React.FC<SpaceDetailProps> = ({ spaceId }) => {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setCurrentPage(`client-${client.id}`)}
+          onClick={() => navigate(`/admin/clients/${client.id}`)}
           className="gap-2"
         >
           <ArrowLeft className="h-4 w-4" />

@@ -8,7 +8,7 @@ export type ApiSuccess<T> = {
 	token?: string;
 };
 
-const API_BASE = (import.meta as any).env?.VITE_API_URL || "http://localhost:3000/api/v1";
+const API_BASE = (import.meta as any).env?.VITE_API_URL || "http://localhost:3001/api/v1";
 
 function getToken(): string | null {
 	try {

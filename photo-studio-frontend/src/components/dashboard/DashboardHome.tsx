@@ -1,17 +1,19 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../contexts/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { Users, Camera, Plus, Image } from 'lucide-react';
+import { Users, Camera, FolderOpen, Plus } from 'lucide-react';
 
 export const DashboardHome: React.FC = () => {
-  const { clients, photoSpaces, collections, setCurrentPage } = useApp();
+  const { clients, photoSpaces, collections } = useApp();
+  const navigate = useNavigate();
 
   const stats = [
     {
       title: 'Total Clients',
       value: clients.length,
-      description: 'Active clients in your studio',
+      description: 'Active clients in the system',
       icon: Users,
       color: 'text-primary'
     },
@@ -26,7 +28,7 @@ export const DashboardHome: React.FC = () => {
       title: 'Total Collections',
       value: collections.length,
       description: 'Organized photo collections',
-      icon: Image,
+      icon: FolderOpen,
       color: 'text-success'
     }
   ];
@@ -36,40 +38,42 @@ export const DashboardHome: React.FC = () => {
       title: 'Add New Client',
       description: 'Create a new client profile',
       icon: Plus,
-      action: () => setCurrentPage('clients'),
+      action: () => navigate('/admin/clients'),
       variant: 'default' as const
     },
     {
-      title: 'Create Photo Space',
-      description: 'Set up a new gallery space',
-      icon: Camera,
-      action: () => setCurrentPage('clients'),
-      variant: 'secondary' as const
+      title: 'View All Clients',
+      description: 'Manage existing clients',
+      icon: Users,
+      action: () => navigate('/admin/clients'),
+      variant: 'outline' as const
     }
   ];
 
   return (
-    <div className="container-studio py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground mb-2">Welcome to Your Studio Dashboard</h1>
-        <p className="text-muted-foreground">Manage your clients, photo spaces, and collections from here.</p>
+    <div className="p-6 space-y-6">
+      <div className="space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-muted-foreground">
+          Welcome to your photo studio management dashboard
+        </p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {stats.map((stat, index) => {
+      {/* Statistics Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {stats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <Card key={index} className="card-elevated hover:shadow-medium transition-all duration-300">
+            <Card key={stat.title}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+                <CardTitle className="text-sm font-medium">
                   {stat.title}
                 </CardTitle>
-                <Icon className={`h-5 w-5 ${stat.color}`} />
+                <Icon className={`h-4 w-4 ${stat.color}`} />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-foreground">{stat.value}</div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <div className="text-2xl font-bold">{stat.value}</div>
+                <p className="text-xs text-muted-foreground">
                   {stat.description}
                 </p>
               </CardContent>
@@ -79,71 +83,70 @@ export const DashboardHome: React.FC = () => {
       </div>
 
       {/* Quick Actions */}
-      <Card className="card-elevated">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Plus className="h-5 w-5 text-primary" />
-            Quick Actions
-          </CardTitle>
-          <CardDescription>
-            Common tasks to get you started quickly
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {quickActions.map((action, index) => {
-              const Icon = action.icon;
-              return (
-                <div
-                  key={index}
-                  className="p-4 border border-border rounded-lg hover:bg-accent-soft/30 transition-colors cursor-pointer group"
-                  onClick={action.action}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="bg-primary/10 rounded-lg p-2 group-hover:bg-primary/20 transition-colors">
-                      <Icon className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-foreground mb-1">{action.title}</h3>
-                      <p className="text-sm text-muted-foreground">{action.description}</p>
-                    </div>
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold">Quick Actions</h2>
+        <div className="grid gap-4 md:grid-cols-2">
+          {quickActions.map((action) => {
+            const Icon = action.icon;
+            return (
+              <Card key={action.title} className="cursor-pointer hover:shadow-md transition-shadow">
+                <CardHeader>
+                  <div className="flex items-center space-x-2">
+                    <Icon className="h-5 w-5" />
+                    <CardTitle className="text-lg">{action.title}</CardTitle>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                  <CardDescription>{action.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    variant={action.variant}
+                    onClick={action.action}
+                    className="w-full"
+                  >
+                    {action.title}
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Recent Activity */}
-      <Card className="card-elevated mt-6">
-        <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-          <CardDescription>Latest updates from your photo studio</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 p-3 bg-accent-soft/20 rounded-lg">
-              <div className="bg-success/10 rounded-full p-2">
-                <Users className="h-4 w-4 text-success" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">New client added: Emma Wilson</p>
-                <p className="text-xs text-muted-foreground">2 hours ago</p>
-              </div>
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold">Recent Activity</h2>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-4">
+              {clients.slice(0, 5).map((client) => (
+                <div key={client.id} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                      <Users className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{client.name}</p>
+                      <p className="text-xs text-muted-foreground">{client.email}</p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate(`/admin/clients/${client.id}`)}
+                  >
+                    View
+                  </Button>
+                </div>
+              ))}
+              {clients.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No clients yet. Add your first client to get started!
+                </p>
+              )}
             </div>
-            <div className="flex items-center gap-3 p-3 bg-accent-soft/20 rounded-lg">
-              <div className="bg-primary/10 rounded-full p-2">
-                <Camera className="h-4 w-4 text-primary" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">Photo space created: Wedding Photography Session</p>
-                <p className="text-xs text-muted-foreground">1 day ago</p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

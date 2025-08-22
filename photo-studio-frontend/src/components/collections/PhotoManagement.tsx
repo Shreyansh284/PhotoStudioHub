@@ -1,4 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useApp } from '../../contexts/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -19,11 +20,14 @@ import BulkUpload from '../admin/BulkUpload';
 import * as api from '../../api';
 
 interface PhotoManagementProps {
-  collectionId: string;
+  collectionId?: string;
 }
 
-export const PhotoManagement: React.FC<PhotoManagementProps> = ({ collectionId }) => {
-  const { getCollectionById, getSpaceById, getClientById, uploadPhoto, deletePhoto, deleteAllPhotos, setCurrentPage } = useApp();
+export const PhotoManagement: React.FC<PhotoManagementProps> = ({ collectionId: propCollectionId }) => {
+  const { collectionId: paramCollectionId } = useParams<{ collectionId: string }>();
+  const collectionId = propCollectionId || paramCollectionId!;
+  const { getCollectionById, getSpaceById, getClientById, uploadPhoto, deletePhoto, deleteAllPhotos } = useApp();
+  const navigate = useNavigate();
   const [uploading, setUploading] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -42,7 +46,7 @@ export const PhotoManagement: React.FC<PhotoManagementProps> = ({ collectionId }
           <CardContent>
             <h3 className="text-lg font-semibold mb-2">Collection not found</h3>
             <p className="text-muted-foreground mb-4">The requested collection could not be found</p>
-            <Button onClick={() => setCurrentPage('clients')} variant="outline">
+            <Button onClick={() => navigate('/admin/clients')} variant="outline">
               Back to Clients
             </Button>
           </CardContent>
@@ -107,7 +111,7 @@ export const PhotoManagement: React.FC<PhotoManagementProps> = ({ collectionId }
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setCurrentPage(`space-${space.id}`)}
+          onClick={() => navigate(`/admin/spaces/${space.id}`)}
           className="gap-2"
         >
           <ArrowLeft className="h-4 w-4" />

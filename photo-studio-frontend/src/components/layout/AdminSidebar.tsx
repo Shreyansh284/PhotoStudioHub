@@ -1,31 +1,34 @@
 import React from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useApp } from '../../contexts/AppContext';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '../ui/button';
-import { 
-  LayoutDashboard, 
-  Users, 
-  LogOut, 
+import {
+  LayoutDashboard,
+  Users,
+  LogOut,
   Camera,
   User
 } from 'lucide-react';
 
 export const AdminSidebar: React.FC = () => {
   const { logout, user } = useAuth();
-  const { currentPage, setCurrentPage } = useApp();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const menuItems = [
     {
       id: 'dashboard',
       label: 'Dashboard',
       icon: LayoutDashboard,
-      isActive: currentPage === 'dashboard'
+      path: '/admin',
+      isActive: location.pathname === '/admin'
     },
     {
       id: 'clients',
       label: 'Clients',
       icon: Users,
-      isActive: currentPage === 'clients' || currentPage.startsWith('client-')
+      path: '/admin/clients',
+      isActive: location.pathname.startsWith('/admin/clients')
     }
   ];
 
@@ -57,12 +60,11 @@ export const AdminSidebar: React.FC = () => {
               <Button
                 key={item.id}
                 variant={item.isActive ? "default" : "ghost"}
-                className={`w-full justify-start gap-3 ${
-                  item.isActive 
-                    ? 'bg-sidebar-primary text-sidebar-primary-foreground' 
+                className={`w-full justify-start gap-3 ${item.isActive
+                    ? 'bg-sidebar-primary text-sidebar-primary-foreground'
                     : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                }`}
-                onClick={() => setCurrentPage(item.id)}
+                  }`}
+                onClick={() => navigate(item.path)}
               >
                 <Icon className="h-5 w-5" />
                 {item.label}
@@ -83,7 +85,7 @@ export const AdminSidebar: React.FC = () => {
             <p className="text-xs text-sidebar-foreground/70 truncate">{user?.email}</p>
           </div>
         </div>
-        
+
         <Button
           variant="ghost"
           className="w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useApp } from '../../contexts/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -9,11 +10,14 @@ import { ArrowLeft, Plus, Camera, Calendar, Settings, Copy } from 'lucide-react'
 import { toast } from '../../hooks/use-toast';
 
 interface ClientDetailProps {
-  clientId: string;
+  clientId?: string;
 }
 
-export const ClientDetail: React.FC<ClientDetailProps> = ({ clientId }) => {
-  const { getClientById, getSpacesByClientId, addPhotoSpace, setCurrentPage } = useApp();
+export const ClientDetail: React.FC<ClientDetailProps> = ({ clientId: propClientId }) => {
+  const { clientId: paramClientId } = useParams<{ clientId: string }>();
+  const clientId = propClientId || paramClientId!;
+  const { getClientById, getSpacesByClientId, addPhotoSpace } = useApp();
+  const navigate = useNavigate();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newSpaceName, setNewSpaceName] = useState('');
 
@@ -27,7 +31,7 @@ export const ClientDetail: React.FC<ClientDetailProps> = ({ clientId }) => {
           <CardContent>
             <h3 className="text-lg font-semibold mb-2">Client not found</h3>
             <p className="text-muted-foreground mb-4">The requested client could not be found</p>
-            <Button onClick={() => setCurrentPage('clients')} variant="outline">
+            <Button onClick={() => navigate('/admin/clients')} variant="outline">
               Back to Clients
             </Button>
           </CardContent>
@@ -55,7 +59,7 @@ export const ClientDetail: React.FC<ClientDetailProps> = ({ clientId }) => {
   };
 
   const handleManageSpace = (spaceId: string) => {
-    setCurrentPage(`space-${spaceId}`);
+    navigate(`/admin/spaces/${spaceId}`);
   };
 
   return (
@@ -64,7 +68,7 @@ export const ClientDetail: React.FC<ClientDetailProps> = ({ clientId }) => {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setCurrentPage('clients')}
+          onClick={() => navigate('/admin/clients')}
           className="gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
