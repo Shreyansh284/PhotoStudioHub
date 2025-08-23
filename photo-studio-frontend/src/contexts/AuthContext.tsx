@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import * as api from "../api";
+import Cookies from "js-cookie";
 
 interface User {
   id: string;
@@ -38,15 +39,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
     setToken(null);
     try {
-      localStorage.removeItem("token");
-      localStorage.removeItem("userEmail");
-      localStorage.removeItem("userName");
+      Cookies.remove("token");
+      Cookies.remove("userEmail");
+      Cookies.remove("userName");
     } catch { }
   };
 
   useEffect(() => {
-    // Hydrate token from storage and fetch profile
-    const t = localStorage.getItem("token");
+    // Hydrate token from cookies and fetch profile
+    const t = Cookies.get("token");
     const hydrate = async () => {
       try {
         if (!t) return;
@@ -66,7 +67,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       const t = await api.login(email, password);
-      localStorage.setItem("token", t);
+      Cookies.set("token", t, { expires: 7 });
       setToken(t);
       const me = await api.getMe();
       setUser({ id: me.id, email: me.email, name: me.email.split('@')[0] });
@@ -81,9 +82,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
     setToken(null);
     try {
-      localStorage.removeItem("token");
-      localStorage.removeItem("userEmail");
-      localStorage.removeItem("userName");
+      Cookies.remove("token");
+      Cookies.remove("userEmail");
+      Cookies.remove("userName");
     } catch { }
   };
 

@@ -1,3 +1,5 @@
+import Cookies from "js-cookie";
+
 // Lightweight API client for the frontend
 // Handles auth token, JSON requests, and multipart uploads
 
@@ -12,7 +14,7 @@ const API_BASE = (import.meta as any).env?.VITE_API_URL || "http://localhost:300
 
 function getToken(): string | null {
 	try {
-		return localStorage.getItem("token");
+		return Cookies.get("token") || null;
 	} catch {
 		return null;
 	}
