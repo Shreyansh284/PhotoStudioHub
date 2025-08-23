@@ -17,6 +17,7 @@ import { ArrowLeft, Upload, Trash2, Download, X, Users, Loader2 } from 'lucide-r
 import { toast } from '../../hooks/use-toast';
 import BulkUpload from '../admin/BulkUpload';
 import * as api from '../../api';
+import { useNavigate } from 'react-router-dom';
 
 interface PhotoManagementProps {
   collectionId: string;
@@ -92,6 +93,7 @@ export const PhotoManagement: React.FC<PhotoManagementProps> = ({ collectionId }
   const closeLightbox = () => {
     setSelectedPhoto(null);
   };
+  const navigate = useNavigate();
 
   // Lazy-chunk photos to reduce initial render work
   const chunkSize = 60; // render in chunks to avoid UI jank
@@ -107,7 +109,7 @@ export const PhotoManagement: React.FC<PhotoManagementProps> = ({ collectionId }
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setCurrentPage(`space-${space.id}`)}
+          onClick={() => navigate(`/admin/spaces/${space.id}`)}
           className="gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
