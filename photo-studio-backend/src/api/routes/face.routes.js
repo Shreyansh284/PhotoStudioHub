@@ -5,20 +5,19 @@ const { protect } = require("../middlewares/auth.middleware");
 
 const router = express.Router({ mergeParams: true });
 
-// Public routes (for client gallery)
+
+// Public routes (no auth needed)
 router.get("/spaces/:spaceId/faces", faceController.getAllFacesInSpace);
-
-// Protected routes (admin only)
-router.use(protect); // All routes below require authentication
-
 router.post(
   "/spaces/:spaceId/collections/:collectionId/photos/:photoId/recognize-faces",
   faceController.recognizeFacesInPhoto
 );
-
 router.post(
   "/spaces/:spaceId/collections/:collectionId/process-faces",
   faceController.processCollectionFaces
 );
+
+// If you want to keep some routes protected, add them below:
+// router.use(protect);
 
 module.exports = router;
