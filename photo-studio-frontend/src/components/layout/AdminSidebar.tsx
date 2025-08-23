@@ -10,7 +10,11 @@ import {
   User
 } from 'lucide-react';
 
-export const AdminSidebar: React.FC = () => {
+interface AdminSidebarProps {
+  onClose?: () => void;
+}
+
+export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onClose }) => {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -37,9 +41,9 @@ export const AdminSidebar: React.FC = () => {
   };
 
   return (
-    <div className="h-full bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border">
-      {/* Logo and Title */}
-      <div className="p-6 border-b border-sidebar-border">
+    <div className="h-full bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border relative">
+      {/* Logo and Title + Close button for mobile */}
+      <div className="p-6 border-b border-sidebar-border flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="bg-sidebar-primary rounded-lg p-2">
             <Camera className="h-6 w-6 text-sidebar-primary-foreground" />
@@ -49,6 +53,18 @@ export const AdminSidebar: React.FC = () => {
             <p className="text-sidebar-foreground/70 text-sm">Management Dashboard</p>
           </div>
         </div>
+        {/* Close button only on mobile */}
+        {onClose && (
+          <button
+            className="md:hidden p-2 ml-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+            onClick={onClose}
+            aria-label="Close sidebar"
+          >
+            <svg className="h-6 w-6 text-foreground" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Navigation */}
