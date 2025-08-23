@@ -10,7 +10,15 @@ export type ApiSuccess<T> = {
 	token?: string;
 };
 
+
 const API_BASE = (import.meta as any).env?.VITE_API_URL || "http://localhost:3001/api/v1";
+
+// Utility to join base and path without double slashes
+function joinUrl(base: string, path: string): string {
+	if (!base.endsWith("/")) base += "/";
+	if (path.startsWith("/")) path = path.slice(1);
+	return base + path;
+}
 
 function getToken(): string | null {
 	try {
@@ -55,16 +63,18 @@ async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit & {
 	}
 }
 
+
 export async function apiGet<T>(path: string): Promise<T> {
-	const res = await fetchWithTimeout(`${API_BASE}${path}`, {
+	const res = await fetchWithTimeout(joinUrl(API_BASE, path), {
 		method: "GET",
 		headers: authHeaders({ Accept: "application/json" }),
 	});
 	return handleResponse<T>(res);
 }
 
+
 export async function apiPostJson<T, B = unknown>(path: string, body: B): Promise<T> {
-	const res = await fetchWithTimeout(`${API_BASE}${path}`, {
+	const res = await fetchWithTimeout(joinUrl(API_BASE, path), {
 		method: "POST",
 		headers: authHeaders({ "Content-Type": "application/json", Accept: "application/json" }),
 		body: JSON.stringify(body),
@@ -72,8 +82,9 @@ export async function apiPostJson<T, B = unknown>(path: string, body: B): Promis
 	return handleResponse<T>(res);
 }
 
+
 export async function apiPatchJson<T, B = unknown>(path: string, body: B): Promise<T> {
-	const res = await fetchWithTimeout(`${API_BASE}${path}`, {
+	const res = await fetchWithTimeout(joinUrl(API_BASE, path), {
 		method: "PATCH",
 		headers: authHeaders({ "Content-Type": "application/json", Accept: "application/json" }),
 		body: JSON.stringify(body),
@@ -81,16 +92,18 @@ export async function apiPatchJson<T, B = unknown>(path: string, body: B): Promi
 	return handleResponse<T>(res);
 }
 
+
 export async function apiDelete<T = unknown>(path: string): Promise<T> {
-	const res = await fetchWithTimeout(`${API_BASE}${path}`, {
+	const res = await fetchWithTimeout(joinUrl(API_BASE, path), {
 		method: "DELETE",
 		headers: authHeaders({ Accept: "application/json" }),
 	});
 	return handleResponse<T>(res);
 }
 
+
 export async function apiPostForm<T>(path: string, formData: FormData): Promise<T> {
-	const res = await fetchWithTimeout(`${API_BASE}${path}`, {
+	const res = await fetchWithTimeout(joinUrl(API_BASE, path), {
 		method: "POST",
 		headers: authHeaders(), // Let the browser set multipart boundary
 		body: formData,

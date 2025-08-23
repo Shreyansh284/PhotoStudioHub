@@ -93,15 +93,15 @@ export const FaceGallery: React.FC<FaceGalleryProps> = ({
                     <Card
                         key={face.id}
                         className={`p-4 cursor-pointer transition-all hover:shadow-md ${selectedFace?.id === face.id
-                                ? 'ring-2 ring-blue-500 bg-blue-50'
-                                : 'hover:shadow-lg'
+                            ? 'ring-2 ring-blue-500 bg-blue-50'
+                            : 'hover:shadow-lg'
                             }`}
                         onClick={() => onFaceSelect(face)}
                     >
                         <div className="flex flex-col items-center space-y-2">
                             <Avatar className="w-20 h-20">
                                 <AvatarImage
-                                    src={face.thumbnailUrl}
+                                    src={face.representative?.photoUrl || face.thumbnailUrl}
                                     alt={`Person ${face.id}`}
                                     className="object-cover"
                                 />
@@ -124,7 +124,7 @@ export const FaceGallery: React.FC<FaceGalleryProps> = ({
                     <div className="flex items-center space-x-3">
                         <Avatar className="w-12 h-12">
                             <AvatarImage
-                                src={selectedFace.thumbnailUrl}
+                                src={selectedFace.representative?.photoUrl || selectedFace.thumbnailUrl}
                                 alt="Selected person"
                                 className="object-cover"
                             />
