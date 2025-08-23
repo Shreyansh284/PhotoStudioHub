@@ -84,8 +84,12 @@ const getAllFacesInSpace = async (spaceId) => {
       return [];
     }
 
-    // Group faces by person (similarity)
-    const groupedFaces = faceApiService.groupFacesByPerson(allFaces);
+    // Group faces by person (similarity) with stricter threshold
+    const SIMILARITY_THRESHOLD = 0.5; // Adjusted for better grouping of same person
+    const groupedFaces = faceApiService.groupFacesByPerson(
+      allFaces,
+      SIMILARITY_THRESHOLD
+    );
 
     // Format response for frontend
     const uniqueFaces = groupedFaces.map((group, index) => {
