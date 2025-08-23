@@ -2,10 +2,10 @@ import React from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '../ui/button';
-import {
-  LayoutDashboard,
-  Users,
-  LogOut,
+import { 
+  LayoutDashboard, 
+  Users, 
+  LogOut, 
   Camera,
   User
 } from 'lucide-react';
@@ -60,10 +60,11 @@ export const AdminSidebar: React.FC = () => {
               <Button
                 key={item.id}
                 variant={item.isActive ? "default" : "ghost"}
-                className={`w-full justify-start gap-3 ${item.isActive
-                    ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                className={`w-full justify-start gap-3 ${
+                  item.isActive 
+                    ? 'bg-sidebar-primary text-sidebar-primary-foreground' 
                     : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                  }`}
+                }`}
                 onClick={() => navigate(item.path)}
               >
                 <Icon className="h-5 w-5" />
@@ -85,7 +86,7 @@ export const AdminSidebar: React.FC = () => {
             <p className="text-xs text-sidebar-foreground/70 truncate">{user?.email}</p>
           </div>
         </div>
-
+        
         <Button
           variant="ghost"
           className="w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"

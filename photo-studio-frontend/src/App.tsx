@@ -34,11 +34,11 @@ const PhotoManagementWrapper = () => {
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
-
+  
   if (!isAuthenticated) {
     return <LoginForm />;
   }
-
+  
   return <AdminLayout>{children}</AdminLayout>;
 };
 
@@ -49,7 +49,7 @@ const AppContent = () => {
         {/* Public routes */}
         <Route path="/gallery/:shareId" element={<PublicGallery />} />
         <Route path="/login" element={<LoginForm />} />
-
+        
         {/* Protected admin routes */}
         <Route path="/admin" element={
           <ProtectedRoute>
@@ -76,7 +76,7 @@ const AppContent = () => {
             <PhotoManagementWrapper />
           </ProtectedRoute>
         } />
-
+        
         {/* Default redirects */}
         <Route path="/" element={<Navigate to="/admin" replace />} />
         <Route path="*" element={<Navigate to="/admin" replace />} />

@@ -98,8 +98,8 @@ export const DashboardHome: React.FC = () => {
                   <CardDescription>{action.description}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Button
-                    variant={action.variant}
+                  <Button 
+                    variant={action.variant} 
                     onClick={action.action}
                     className="w-full"
                   >
@@ -129,8 +129,8 @@ export const DashboardHome: React.FC = () => {
                       <p className="text-xs text-muted-foreground">{client.email}</p>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
+                  <Button 
+                    variant="ghost" 
                     size="sm"
                     onClick={() => navigate(`/admin/clients/${client.id}`)}
                   >
